@@ -62,28 +62,40 @@ SBE MessageHeader:
 make ZF_INCLUDE=/opt/onload/include ZF_LIB=/opt/onload/lib
 ```
 
-Dependencies: `libonload_zf`, `libssl`, `libcrypto` (OpenSSL).
+Dependencies: `libonload_zf` (TCPDirect) and `libcrypto` (OpenSSL).
 
 ## Run
 
 ```bash
-# Must run as root (or with CAP_NET_RAW) for TCPDirect
-sudo ./ilink3_demo \
+# TCPDirect may require elevated privileges depending on host configuration
+./ilink3_demo \
     --interface eth0         \
     --host <msgw_ip>         \
     --port <msgw_port>       \
     --access-key <access_key_id> \
     --secret-key <hmac_secret_b64url> \
     --session <session_id>   \
-    --firm <firm_id>
+    --firm <firm_id>         \
+    [--verbose]
 ```
 
 Example:
 ```bash
-sudo ./ilink3_demo --interface eth0 --host 10.0.1.1 --port 9000 \
-    --access-key ABCDEFGHIJ0123456789 --secret-key <secret> \
+./ilink3_demo --interface eth0 --host 10.0.1.1 --port 9000 \
+    --access-key ABCDEFGHIJ0123456789 --secret-key <base64url-secret> \
     --session ABC --firm XYZ
 ```
+
+## Known Requirements
+
+- Use a TCPDirect-capable interface name with `--interface`.
+- Use CME-issued `access-key`, `secret-key`, `session`, and `firm` values exactly as configured.
+- Only one process should actively own the same iLink3 session at a time.
+- `UUID` should be a current microseconds-since-epoch value and should increase for each new negotiated session.
+- `RequestTimestamp` should be current nanoseconds-since-epoch; CME documents that stale timestamps can be rejected.
+- When negotiating a new UUID, reset sequence numbers to `1` in both directions as described in CME's session-layer documentation.
+
+Reference: [CME iLink Binary Order Entry - Session Layer](https://cmegroupclientsite.atlassian.net/wiki/spaces/EPICSANDBOX/pages/714145834/iLink+Binary+Order+Entry+-+Session+Layer)
 
 ## What this demo does NOT cover
 

@@ -20,13 +20,13 @@ make clean
 ```
 
 **Compiler:** GCC with `-O2 -Wall -Wextra -std=gnu11`
-**Dependencies:** `libonload_zf` (TCPDirect); SHA-256/HMAC is self-contained (no OpenSSL)
+**Dependencies:** `libonload_zf` (TCPDirect) and `libcrypto` for SHA-256/HMAC
 
 ## Running
 
 ```bash
-# Requires root (or CAP_NET_RAW) for TCPDirect
-sudo ./ilink3_demo \
+# TCPDirect may require elevated privileges depending on host configuration
+./ilink3_demo \
     --interface eth0       \
     --host <ip>              # CME MSGW IP
     --port <port>            # CME MSGW port
@@ -46,7 +46,7 @@ No automated tests exist. Verification is done by running against a CME test gat
 
 ### Key Files
 
-- **`ilink3_demo.c`** — Single application file (~548 lines); entire session state machine lives here
+- **`cme_ilink3_demo.c`** — Single application file; entire session state machine lives here
 - **`ilink3_sbe.h`** — SBE wire format structs (`sofh_t`, `sbe_header_t`, message bodies), all `__attribute__((packed))`; helper functions for framing/parsing
 - **`ilinkbinary.xml`** — Full CME SBE schema (reference only; not used at runtime)
 - **`include/zf/`** — TCPDirect public API headers
@@ -91,7 +91,7 @@ Signature is 32 raw binary bytes placed in the `HMACSignature` field. Both `--se
 - `zf_reactor_perform()` — must be called in polling loops to drive the stack
 - `zf_muxer_wait()` — blocks until socket is readable/writable (with ns-resolution timeout)
 
-### Tunable Constants (top of `ilink3_demo.c`)
+### Tunable Constants (top of `cme_ilink3_demo.c`)
 
 | Constant | Default | Purpose |
 |----------|---------|---------|
