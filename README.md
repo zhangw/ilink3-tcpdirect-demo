@@ -1,5 +1,7 @@
 # CME iLink3 v9 TCPDirect Demo
 
+A small C client for connecting to CME MSGW over iLink3 v9 using TCPDirect.
+
 Minimal demo that walks through the full iLink3 v9 session lifecycle over
 TCPDirect (`zf_*` APIs) on a Solarflare NIC.
 
