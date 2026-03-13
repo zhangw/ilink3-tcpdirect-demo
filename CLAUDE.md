@@ -30,10 +30,19 @@ make clean
     --interface eth0       \
     --host <ip>              # CME MSGW IP
     --port <port>            # CME MSGW port
+    [--verbose]              # detailed logging
+```
+
+```bash
+# Full iLink3 session
+./ilink3_demo --full-session \
+    --interface eth0         \
+    --host <ip>              # CME MSGW IP
+    --port <port>            # CME MSGW port
     --access-key <20chars>   # iLink3 access key
     --secret-key <43chars>   # Base64URL secret key (from CME)
-    --session <str>          # CME Session ID (up to 3 chars, required for HMAC)
-    --firm <str>             # CME Firm ID (up to 5 chars, required for HMAC)
+    --session <str>          # CME Session ID (up to 3 chars)
+    --firm <str>             # CME Firm ID (up to 5 chars)
     [--rounds N]             # keepalive rounds (default: 3)
     [--app-name <str>]       # TradingSystemName (default: demo)
     [--app-ver <str>]        # TradingSystemVersion (default: 1.0)

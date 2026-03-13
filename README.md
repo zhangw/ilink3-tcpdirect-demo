@@ -72,16 +72,17 @@ Dependencies: `libonload_zf` (TCPDirect) and `libcrypto` (OpenSSL).
     --interface eth0         \
     --host <msgw_ip>         \
     --port <msgw_port>       \
-    --access-key <access_key_id> \
-    --secret-key <hmac_secret_b64url> \
-    --session <session_id>   \
-    --firm <firm_id>         \
     [--verbose]
 ```
 
 Example:
 ```bash
-./ilink3_demo --interface eth0 --host 10.0.1.1 --port 9000 \
+./ilink3_demo --interface eth0 --host 10.0.1.1 --port 9000 --verbose
+```
+
+Full session example:
+```bash
+./ilink3_demo --full-session --interface eth0 --host 10.0.1.1 --port 9000 \
     --access-key ABCDEFGHIJ0123456789 --secret-key <base64url-secret> \
     --session ABC --firm XYZ
 ```

@@ -15,6 +15,11 @@
  * Run:
  *   ./ilink3_demo \
  *       --interface eth1 \
+ *       --host 10.0.0.1 --port 10000
+ *
+ *   Full session:
+ *   ./ilink3_demo --full-session \
+ *       --interface eth1 \
  *       --host 10.0.0.1 --port 10000 \
  *       --access-key <20-char key> \
  *       --secret-key <43-char base64url secret> \
@@ -743,14 +748,16 @@ static void usage(const char *prog)
         "  --host       <ip>   CME MSGW IP address (required)\n"
         "  --port       <port> CME MSGW port       (required)\n"
         "  --interface  <if>   TCPDirect NIC interface (required)\n"
-        "  --access-key <key>  20-char CME access key ID (required)\n"
-        "  --secret-key <b64>  43-char Base64URL secret key from CME (required)\n"
-        "  --session    <str>  CME Session ID, up to 3 chars (required for HMAC)\n"
-        "  --firm       <str>  CME Firm ID, up to 5 chars   (required for HMAC)\n"
-        "  --app-name   <str>  trading system name    (default: demo)\n"
-        "  --app-ver    <str>  trading system version (default: 1.0)\n"
-        "  --app-vendor <str>  trading system vendor  (default: demo)\n"
-        "  --rounds     <n>    Sequence keepalive rounds (default: %d)\n"
+        "  --tcpconnect-only   validate TCP connection only (default: on)\n"
+        "  --full-session      run Negotiate/Establish/Sequence/Terminate\n"
+        "  --access-key <key>  20-char CME access key ID (required for --full-session)\n"
+        "  --secret-key <b64>  43-char Base64URL secret key from CME (required for --full-session)\n"
+        "  --session    <str>  CME Session ID, up to 3 chars (required for --full-session)\n"
+        "  --firm       <str>  CME Firm ID, up to 5 chars   (required for --full-session)\n"
+        "  --app-name   <str>  trading system name    (used by --full-session; default: demo)\n"
+        "  --app-ver    <str>  trading system version (used by --full-session; default: 1.0)\n"
+        "  --app-vendor <str>  trading system vendor  (used by --full-session; default: demo)\n"
+        "  --rounds     <n>    Sequence keepalive rounds for --full-session (default: %d)\n"
         "  --verbose          print detailed protocol/debug logs\n"
         "\n",
         prog, KEEPALIVE_ROUNDS);
@@ -770,6 +777,7 @@ int main(int argc, char *argv[])
     s.next_seq_no = 1;
     s.server_next_seq = 1;
     s.establish_next_seq_no = 1;
+    bool tcpconnect_only = true;
     int  rounds      = KEEPALIVE_ROUNDS;
     char host[64]    = "";
     int  port        = 0;
@@ -779,6 +787,8 @@ int main(int argc, char *argv[])
         {"host",       required_argument, 0, 'h'},
         {"port",       required_argument, 0, 'p'},
         {"interface",  required_argument, 0, 'i'},
+        {"tcpconnect-only", no_argument,  0, 't'},
+        {"full-session",    no_argument,  0, 'F'},
         {"access-key", required_argument, 0, 'k'},
         {"secret-key", required_argument, 0, 'S'},
         {"session",    required_argument, 0, 's'},
@@ -797,6 +807,8 @@ int main(int argc, char *argv[])
         case 'h': strncpy(host,             optarg, sizeof(host)             - 1); break;
         case 'p': port = atoi(optarg);                                              break;
         case 'i': strncpy(s.interface,      optarg, sizeof(s.interface)      - 1); break;
+        case 't': tcpconnect_only = true;                                           break;
+        case 'F': tcpconnect_only = false;                                          break;
         case 'k': strncpy(s.access_key,     optarg, sizeof(s.access_key)     - 1); break;
         case 'S': strncpy(secret_key_str,   optarg, sizeof(secret_key_str)   - 1); break;
         case 's': strncpy(s.session_id,     optarg, sizeof(s.session_id)     - 1); break;
@@ -814,21 +826,23 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Error: --host, --port, and --interface are required.\n\n");
         usage(argv[0]); return 1;
     }
-    if (secret_key_str[0] == '\0') {
-        fprintf(stderr, "Error: --secret-key is required.\n\n");
-        usage(argv[0]); return 1;
-    }
+    if (! tcpconnect_only) {
+        if (secret_key_str[0] == '\0') {
+            fprintf(stderr, "Error: --secret-key is required for --full-session.\n\n");
+            usage(argv[0]); return 1;
+        }
 
-    if (validate_fixed_fields(&s) != 0)
-        return 1;
+        if (validate_fixed_fields(&s) != 0)
+            return 1;
 
-    /* Decode Base64URL secret key → 32 binary bytes */
-    size_t secret_len = 0;
-    if (base64url_decode(secret_key_str, s.secret_key_bin, &secret_len) != 0
-        || secret_len != 32) {
-        fprintf(stderr, "Error: --secret-key must be a 43-char Base64URL string "
-                        "(decodes to 32 bytes, got %zu)\n", secret_len);
-        return 1;
+        /* Decode Base64URL secret key → 32 binary bytes */
+        size_t secret_len = 0;
+        if (base64url_decode(secret_key_str, s.secret_key_bin, &secret_len) != 0
+            || secret_len != 32) {
+            fprintf(stderr, "Error: --secret-key must be a 43-char Base64URL string "
+                            "(decodes to 32 bytes, got %zu)\n", secret_len);
+            return 1;
+        }
     }
 
     s.server_addr.sin_family = AF_INET;
@@ -850,6 +864,12 @@ int main(int argc, char *argv[])
 
     rc = tcp_connect(&s);
     if (rc != 0) { cleanup(&s); return 1; }
+
+    if (tcpconnect_only) {
+        printf("[DONE] TCP connection validated.\n");
+        cleanup(&s);
+        return 0;
+    }
 
     rc = do_negotiate(&s);
     if (rc != 0) { cleanup(&s); return 1; }
