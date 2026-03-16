@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /Users/vincent/Desktop/ilink3-tcpdirect-demo/*.c /Users/vincent/Desktop/ilink3-tcpdirect-demo/*.h)",
+      "Bash(make 2>&1)",
+      "Bash(make clean:*)"
+    ]
+  }
+}
