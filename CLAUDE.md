@@ -9,10 +9,10 @@ This is a **CME iLink3 v9 Protocol Demo** — a minimal C client demonstrating t
 ## Build Commands
 
 ```bash
-# Default build (uses bundled headers/libs in ./include and ./lib)
+# Default build (system Onload installation at /usr/include, /usr/lib)
 make
 
-# Build with system Onload installation
+# Build with custom Onload installation path
 make ZF_INCLUDE=/opt/onload/include ZF_LIB=/opt/onload/lib
 
 # Clean
@@ -26,7 +26,7 @@ make clean
 
 ```bash
 # TCPDirect may require elevated privileges depending on host configuration
-./ilink3_demo \
+./ilink3_client \
     --interface eth0       \
     --host <ip>              # CME MSGW IP
     --port <port>            # CME MSGW port
@@ -35,7 +35,7 @@ make clean
 
 ```bash
 # Full iLink3 session
-./ilink3_demo --full-session \
+./ilink3_client --full-session \
     --interface eth0         \
     --host <ip>              # CME MSGW IP
     --port <port>            # CME MSGW port
@@ -55,11 +55,11 @@ No automated tests exist. Verification is done by running against a CME test gat
 
 ### Key Files
 
-- **`cme_ilink3_demo.c`** — Single application file; entire session state machine lives here
+- **`ilink3_client.c`** — Client binary; full session state machine (TCP connect → Negotiate → Establish → Sequence → Terminate)
+- **`ilink3_server.c`** — Loopback server binary; handles the server side of the iLink3 session lifecycle
+- **`ilink3_proto.h`** — Shared transport utilities (ZF stack init, send/recv helpers, frame extraction); included by both client and server
 - **`ilink3_sbe.h`** — SBE wire format structs (`sofh_t`, `sbe_header_t`, message bodies), all `__attribute__((packed))`; helper functions for framing/parsing
 - **`ilinkbinary.xml`** — Full CME SBE schema (reference only; not used at runtime)
-- **`include/zf/`** — TCPDirect public API headers
-- **`lib/`** — TCPDirect shared/static libraries
 
 ### Session State Machine
 
@@ -100,7 +100,7 @@ Signature is 32 raw binary bytes placed in the `HMACSignature` field. Both `--se
 - `zf_reactor_perform()` — must be called in polling loops to drive the stack
 - `zf_muxer_wait()` — blocks until socket is readable/writable (with ns-resolution timeout)
 
-### Tunable Constants (top of `cme_ilink3_demo.c`)
+### Tunable Constants (top of `ilink3_client.c`)
 
 | Constant | Default | Purpose |
 |----------|---------|---------|

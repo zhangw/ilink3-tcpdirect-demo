@@ -1,0 +1,10 @@
+lib/
+include/
+.worktrees/
+ilink3_client
+ilink3_client_static
+ilink3_server
+*.o
+.git/
+profiles/
+scripts/

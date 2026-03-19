@@ -58,7 +58,10 @@ SBE MessageHeader:
 ## Build
 
 ```bash
-# Adjust paths for your TCPDirect installation
+# Default build (system Onload at /usr/include, /usr/lib)
+make
+
+# Or with a custom Onload installation path
 make ZF_INCLUDE=/opt/onload/include ZF_LIB=/opt/onload/lib
 ```
 
@@ -68,7 +71,7 @@ Dependencies: `libonload_zf` (TCPDirect) and `libcrypto` (OpenSSL).
 
 ```bash
 # TCPDirect may require elevated privileges depending on host configuration
-./ilink3_demo \
+./ilink3_client \
     --interface eth0         \
     --host <msgw_ip>         \
     --port <msgw_port>       \
@@ -77,12 +80,12 @@ Dependencies: `libonload_zf` (TCPDirect) and `libcrypto` (OpenSSL).
 
 Example:
 ```bash
-./ilink3_demo --interface eth0 --host 10.0.1.1 --port 9000 --verbose
+./ilink3_client --interface eth0 --host 10.0.1.1 --port 9000 --verbose
 ```
 
 Full session example:
 ```bash
-./ilink3_demo --full-session --interface eth0 --host 10.0.1.1 --port 9000 \
+./ilink3_client --full-session --interface eth0 --host 10.0.1.1 --port 9000 \
     --access-key ABCDEFGHIJ0123456789 --secret-key <base64url-secret> \
     --session ABC --firm XYZ
 ```

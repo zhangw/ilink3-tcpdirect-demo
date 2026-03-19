@@ -122,6 +122,8 @@ typedef struct __attribute__((packed)) {
     uint8_t       environment_indicator; /* @ 32: EnvironmentIndicator     uInt8NULL   */
 } negotiation_resp_body_t;            /* 33 bytes */
 
+#define NEGOTIATION_RESP_BLOCK_LEN  33u
+
 /* ── NegotiationReject (502) ─────────────────────────────────────────────── */
 /*
  * blockLength = 69
@@ -176,6 +178,8 @@ typedef struct __attribute__((packed)) {
     uint8_t       split_msg;          /* @ 37: SplitMsg                    uInt8NULL   */
     uint8_t       environment_indicator; /* @ 38: EnvironmentIndicator     uInt8NULL   */
 } establishment_ack_body_t;           /* 39 bytes */
+
+#define ESTABLISHMENT_ACK_BLOCK_LEN  39u
 
 /* ── EstablishmentReject (505) ───────────────────────────────────────────── */
 /*
