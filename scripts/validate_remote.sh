@@ -1,12 +1,6 @@
 #!/bin/bash
-# Usage: [PROFILE=profiles/other.env] ./scripts/validate_remote.sh
-set -e
-
-PROFILE=${PROFILE:-profiles/gpu-dev2.env}
-source "${PROFILE}"
-
-SSH_OPTS=(-o ConnectTimeout=5 -o BatchMode=yes)
-[ -n "${REMOTE_SSH_KEY:-}" ] && SSH_OPTS+=(-i "${REMOTE_SSH_KEY}")
+# Usage: [PROFILE=profiles/<name>.env] ./scripts/validate_remote.sh
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh" 5
 
 echo "[*] Checking SSH to ${REMOTE_USER}@${REMOTE_HOST}..."
 ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${REMOTE_HOST}" echo "SSH OK" || {
@@ -14,8 +8,15 @@ ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${REMOTE_HOST}" echo "SSH OK" || {
 }
 
 echo "[*] Checking required tools on remote..."
-TOOLS=(docker make gcc unzip)
-for tool in "${TOOLS[@]}"; do
-    ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${REMOTE_HOST}" \
-        "command -v ${tool} >/dev/null 2>&1 && echo '  [ok] ${tool}' || echo '  [missing] ${tool}'"
-done
+ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${REMOTE_HOST}" '
+    missing=0
+    for tool in docker make gcc unzip; do
+        if command -v "$tool" >/dev/null 2>&1; then
+            echo "  [ok] $tool"
+        else
+            echo "  [missing] $tool"
+            missing=1
+        fi
+    done
+    exit $missing
+' || { echo "[!] Some required tools are missing on remote." >&2; exit 1; }

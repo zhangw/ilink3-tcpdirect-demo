@@ -2,3 +2,5 @@ ilink3_client
 ilink3_client_static
 ilink3_server
 .worktrees/
+profiles/*.env
+!profiles/example.env
