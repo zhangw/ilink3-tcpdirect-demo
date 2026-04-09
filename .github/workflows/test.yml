@@ -51,7 +51,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull base image
-        run: docker pull ${{ env.BASE_IMAGE }}
+        run: |
+          docker pull ${{ env.BASE_IMAGE }} || {
+            echo "::error::Failed to pull base image. If the package is private, go to"
+            echo "::error::https://github.com/users/${{ github.repository_owner }}/packages/container/ilink3-base/settings"
+            echo "::error::and either make it public or add this repo under 'Manage Actions access'."
+            exit 1
+          }
 
       - name: Build app image
         run: docker build --build-arg BASE_IMAGE=${{ env.BASE_IMAGE }} -t ilink3-test .
