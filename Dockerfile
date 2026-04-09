@@ -1,42 +1,12 @@
-FROM ubuntu:22.04
+# Dockerfile — iLink3 demo + test suite
+#
+# Uses pre-built base image with OpenOnload + TCPDirect already compiled.
+# The base image is built from Dockerfile.base and pushed to ghcr.io.
+#
+# For local builds with deps/ available, use Dockerfile.full instead.
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential python3 perl git libssl-dev libpcap-dev libcap-dev unzip \
-    libcap2-bin iproute2 \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /build
-
-COPY deps/sf-122451-ls-17-openonload-deb-release-package.zip  ./
-COPY deps/xn-201048-ls-9-tcpdirect-deb-release-package.zip    ./
-
-# Extract OpenOnload source
-RUN unzip -q sf-122451-ls-17-openonload-deb-release-package.zip -d openonload-pkg && \
-    cd openonload-pkg && \
-    tar xzf onload_*.tgz && \
-    tar xzf onload_*.orig.tar.gz
-
-# Strip -Werror from OpenOnload build system (glibc 2.35+ introduces new warnings)
-RUN find /build/openonload-pkg/onload-*/mk -name "*.mk" -exec sed -i 's/-Werror\b//g' {} \;
-
-# Build OpenOnload userspace libs (provides libefcp.so etc. needed by ZF runtime)
-RUN cd /build/openonload-pkg/onload-* && \
-    scripts/onload_build --user && \
-    find build/gnu_x86_64/lib -name "*.so*" | xargs cp -at /usr/lib/ && \
-    cp build/gnu_x86_64/tools/cplane/onload_cp_server /usr/sbin/ && \
-    ldconfig
-
-# Build TCPDirect with ZF_DEVEL=1, pointing at the OpenOnload source tree
-RUN unzip -q xn-201048-ls-9-tcpdirect-deb-release-package.zip -d tcpdirect-pkg && \
-    cd tcpdirect-pkg && \
-    tar xzf tcpdirect_*.tgz && \
-    tar xzf tcpdirect_*.orig.tar.gz && \
-    ONLOAD_TREE=$(ls -d /build/openonload-pkg/onload-*/ | head -1) && \
-    cd tcpdirect-* && \
-    make ONLOAD_TREE=${ONLOAD_TREE%/} ZF_DEVEL=1 -j$(nproc) && \
-    cp -r src/include/zf src/include/zf_internal /usr/include/ && \
-    cp build/*-zf-devel/lib/libonload_zf* /usr/lib/ && \
-    ldconfig
+ARG BASE_IMAGE=ghcr.io/zhangw/ilink3-base:latest
+FROM ${BASE_IMAGE}
 
 WORKDIR /app
 COPY . .

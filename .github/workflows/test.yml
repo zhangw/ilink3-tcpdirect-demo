@@ -28,17 +28,33 @@ on:
         default: '120000'
         type: string
 
+env:
+  BASE_IMAGE: ghcr.io/${{ github.repository_owner }}/ilink3-base:latest
+
 jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    permissions:
+      packages: read
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker build -t ilink3-test .
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull base image
+        run: docker pull ${{ env.BASE_IMAGE }}
+
+      - name: Build app image
+        run: docker build --build-arg BASE_IMAGE=${{ env.BASE_IMAGE }} -t ilink3-test .
 
       - name: Run smoke test (loopback)
         run: |
@@ -53,6 +69,7 @@ jobs:
 
       - name: Run full test suite
         run: |
+          mkdir -p test-results
           docker run --rm \
             --shm-size=512m \
             --ulimit memlock=-1 \

@@ -5,7 +5,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh" 10
 echo "[*] Building and testing on ${REMOTE_HOST}..."
 ssh "${SSH_OPTS[@]}" "${REMOTE_USER}@${REMOTE_HOST}" "
     cd ${REMOTE_PATH} &&
-    docker build -t ilink3-demo . 2>&1 &&
+    docker build -f Dockerfile.full -t ilink3-demo . 2>&1 &&
     echo '[*] Build done — running smoke test (loopback)...' &&
     docker run --rm \
         --shm-size=512m \
