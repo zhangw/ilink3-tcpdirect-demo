@@ -1,0 +1,77 @@
+name: iLink3 Test Suite
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      perf_rounds:
+        description: 'Number of sequence rounds for perf test'
+        default: '100'
+        type: string
+      thresh_negotiate_ms:
+        description: 'Negotiate latency threshold (ms, emulator ~100ms baseline)'
+        default: '500'
+        type: string
+      thresh_establish_ms:
+        description: 'Establish latency threshold (ms, emulator ~100ms baseline)'
+        default: '500'
+        type: string
+      thresh_sequence_ms:
+        description: 'Sequence p99 latency threshold (ms, emulator ~100ms baseline)'
+        default: '500'
+        type: string
+      thresh_total_ms:
+        description: 'Total session time threshold (ms)'
+        default: '120000'
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ilink3-test .
+
+      - name: Run smoke test (loopback)
+        run: |
+          docker run --rm \
+            --shm-size=512m \
+            --ulimit memlock=-1 \
+            --cap-add=IPC_LOCK \
+            --cap-add=NET_ADMIN \
+            --privileged \
+            ilink3-test \
+            /app/run_loopback.sh
+
+      - name: Run full test suite
+        run: |
+          docker run --rm \
+            --shm-size=512m \
+            --ulimit memlock=-1 \
+            --cap-add=IPC_LOCK \
+            --cap-add=NET_ADMIN \
+            --privileged \
+            -e PERF_ROUNDS=${{ inputs.perf_rounds || '100' }} \
+            -e THRESH_NEGOTIATE_MS=${{ inputs.thresh_negotiate_ms || '500' }} \
+            -e THRESH_ESTABLISH_MS=${{ inputs.thresh_establish_ms || '500' }} \
+            -e THRESH_SEQUENCE_MS=${{ inputs.thresh_sequence_ms || '500' }} \
+            -e THRESH_TOTAL_MS=${{ inputs.thresh_total_ms || '120000' }} \
+            -v ${{ github.workspace }}/test-results:/app/tests/results \
+            ilink3-test \
+            /app/tests/run_all_tests.sh
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 30

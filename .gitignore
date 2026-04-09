@@ -5,3 +5,13 @@ ilink3_server
 .worktrees/
 profiles/*.env
 !profiles/example.env
+
+# Test binaries and results
+test_base64url
+test_hmac_signing
+test_sbe_framing
+test_validation
+test_frame_extract
+perf_session
+tests/results/
+test-results/
