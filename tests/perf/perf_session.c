@@ -106,7 +106,7 @@ static inline double elapsed_ms(struct timespec *start)
            (now.tv_nsec - start->tv_nsec) / 1e6;
 }
 
-/* ── Session (reuse client logic) ────────────────────────────────────────── */
+/* ── Session ──────────────────────────────────────────────────────────────── */
 
 typedef struct {
     ilink3_transport_t   t;
@@ -373,97 +373,62 @@ int main(int argc, char *argv[])
     char thresh_results[2048] = "";
     int tpos = 0;
 
-    if (thresh_negotiate_ms > 0 && negotiate_ms > thresh_negotiate_ms) {
+    struct { const char *name; double limit; double actual; } checks[] = {
+        { "negotiate_threshold",     thresh_negotiate_ms, negotiate_ms   },
+        { "establish_threshold",     thresh_establish_ms, establish_ms   },
+        { "sequence_p99_threshold",  thresh_sequence_ms,  seq_stats.p99  },
+        { "total_threshold",         thresh_total_ms,     total_ms       },
+    };
+
+    for (int i = 0; i < (int)(sizeof(checks)/sizeof(checks[0])); i++) {
+        if (checks[i].limit <= 0) continue;
+        int passed = checks[i].actual <= checks[i].limit;
+        if (!passed) failures++;
         tpos += snprintf(thresh_results + tpos, sizeof(thresh_results) - (size_t)tpos,
-            "    {\"name\": \"negotiate_threshold\", \"passed\": false, \"limit_ms\": %.1f, \"actual_ms\": %.3f},\n",
-            thresh_negotiate_ms, negotiate_ms);
-        failures++;
-    } else if (thresh_negotiate_ms > 0) {
-        tpos += snprintf(thresh_results + tpos, sizeof(thresh_results) - (size_t)tpos,
-            "    {\"name\": \"negotiate_threshold\", \"passed\": true, \"limit_ms\": %.1f, \"actual_ms\": %.3f},\n",
-            thresh_negotiate_ms, negotiate_ms);
+            "    {\"name\": \"%s\", \"passed\": %s, \"limit_ms\": %.1f, \"actual_ms\": %.3f},\n",
+            checks[i].name, passed ? "true" : "false", checks[i].limit, checks[i].actual);
     }
 
-    if (thresh_establish_ms > 0 && establish_ms > thresh_establish_ms) {
-        tpos += snprintf(thresh_results + tpos, sizeof(thresh_results) - (size_t)tpos,
-            "    {\"name\": \"establish_threshold\", \"passed\": false, \"limit_ms\": %.1f, \"actual_ms\": %.3f},\n",
-            thresh_establish_ms, establish_ms);
-        failures++;
-    } else if (thresh_establish_ms > 0) {
-        tpos += snprintf(thresh_results + tpos, sizeof(thresh_results) - (size_t)tpos,
-            "    {\"name\": \"establish_threshold\", \"passed\": true, \"limit_ms\": %.1f, \"actual_ms\": %.3f},\n",
-            thresh_establish_ms, establish_ms);
-    }
-
-    if (thresh_sequence_ms > 0 && seq_stats.p99 > thresh_sequence_ms) {
-        tpos += snprintf(thresh_results + tpos, sizeof(thresh_results) - (size_t)tpos,
-            "    {\"name\": \"sequence_p99_threshold\", \"passed\": false, \"limit_ms\": %.1f, \"actual_p99_ms\": %.3f},\n",
-            thresh_sequence_ms, seq_stats.p99);
-        failures++;
-    } else if (thresh_sequence_ms > 0) {
-        tpos += snprintf(thresh_results + tpos, sizeof(thresh_results) - (size_t)tpos,
-            "    {\"name\": \"sequence_p99_threshold\", \"passed\": true, \"limit_ms\": %.1f, \"actual_p99_ms\": %.3f},\n",
-            thresh_sequence_ms, seq_stats.p99);
-    }
-
-    if (thresh_total_ms > 0 && total_ms > thresh_total_ms) {
-        tpos += snprintf(thresh_results + tpos, sizeof(thresh_results) - (size_t)tpos,
-            "    {\"name\": \"total_threshold\", \"passed\": false, \"limit_ms\": %.1f, \"actual_ms\": %.3f}\n",
-            thresh_total_ms, total_ms);
-        failures++;
-    } else if (thresh_total_ms > 0) {
-        tpos += snprintf(thresh_results + tpos, sizeof(thresh_results) - (size_t)tpos,
-            "    {\"name\": \"total_threshold\", \"passed\": true, \"limit_ms\": %.1f, \"actual_ms\": %.3f}\n",
-            thresh_total_ms, total_ms);
-    }
-
-    /* Remove trailing comma if present */
+    /* Remove trailing comma */
     if (tpos > 2 && thresh_results[tpos - 2] == ',') {
         thresh_results[tpos - 2] = '\n';
         thresh_results[tpos - 1] = '\0';
     }
 
-    /* Write JSON */
+    /* Write JSON to file and stdout */
     FILE *f = fopen(output, "w");
-    if (!f) f = stdout;
+    FILE *dests[2] = { stdout, f };
+    int ndests = f ? 2 : 1;
+
+#define TPRINTF(...) do { for (int _d = 0; _d < ndests; _d++) fprintf(dests[_d], __VA_ARGS__); } while(0)
 
     time_t now = time(NULL);
     struct tm *tm = gmtime(&now);
     char timestamp[32];
     strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", tm);
 
-    fprintf(f, "{\n");
-    fprintf(f, "  \"suite\": \"perf\",\n");
-    fprintf(f, "  \"timestamp\": \"%s\",\n", timestamp);
-    fprintf(f, "  \"rounds\": %d,\n", rounds);
-    fprintf(f, "  \"negotiate_ms\": %.3f,\n", negotiate_ms);
-    fprintf(f, "  \"establish_ms\": %.3f,\n", establish_ms);
-    fprintf(f, "  \"total_ms\": %.3f,\n", total_ms);
-    fprintf(f, "  \"sequence\": {\n");
-    fprintf(f, "    \"count\": %d,\n", seq_stats.min > 0 ? rounds : 0);
-    fprintf(f, "    \"min_ms\": %.3f,\n", seq_stats.min);
-    fprintf(f, "    \"avg_ms\": %.3f,\n", seq_stats.avg);
-    fprintf(f, "    \"max_ms\": %.3f,\n", seq_stats.max);
-    fprintf(f, "    \"p99_ms\": %.3f,\n", seq_stats.p99);
-    fprintf(f, "    \"stddev_ms\": %.3f\n", seq_stats.stddev);
-    fprintf(f, "  },\n");
-    fprintf(f, "  \"thresholds\": [\n%s  ],\n", thresh_results);
-    fprintf(f, "  \"threshold_failures\": %d\n", failures);
-    fprintf(f, "}\n");
+    TPRINTF("{\n");
+    TPRINTF("  \"suite\": \"perf\",\n");
+    TPRINTF("  \"timestamp\": \"%s\",\n", timestamp);
+    TPRINTF("  \"rounds\": %d,\n", rounds);
+    TPRINTF("  \"negotiate_ms\": %.3f,\n", negotiate_ms);
+    TPRINTF("  \"establish_ms\": %.3f,\n", establish_ms);
+    TPRINTF("  \"total_ms\": %.3f,\n", total_ms);
+    TPRINTF("  \"sequence\": {\n");
+    TPRINTF("    \"count\": %d,\n", seq_stats.min > 0 ? rounds : 0);
+    TPRINTF("    \"min_ms\": %.3f,\n", seq_stats.min);
+    TPRINTF("    \"avg_ms\": %.3f,\n", seq_stats.avg);
+    TPRINTF("    \"max_ms\": %.3f,\n", seq_stats.max);
+    TPRINTF("    \"p99_ms\": %.3f,\n", seq_stats.p99);
+    TPRINTF("    \"stddev_ms\": %.3f\n", seq_stats.stddev);
+    TPRINTF("  },\n");
+    TPRINTF("  \"thresholds\": [\n%s  ],\n", thresh_results);
+    TPRINTF("  \"threshold_failures\": %d\n", failures);
+    TPRINTF("}\n");
 
-    if (f != stdout) fclose(f);
+#undef TPRINTF
 
-    /* Print to stdout too */
-    if (f != stdout) {
-        FILE *f2 = fopen(output, "r");
-        if (f2) {
-            char buf[4096];
-            size_t n;
-            while ((n = fread(buf, 1, sizeof(buf), f2)) > 0)
-                fwrite(buf, 1, n, stdout);
-            fclose(f2);
-        }
-    }
+    if (f) fclose(f);
 
     fprintf(stderr, "\n[PERF] negotiate=%.3fms establish=%.3fms seq(avg=%.3f p99=%.3f) total=%.3fms\n",
             negotiate_ms, establish_ms, seq_stats.avg, seq_stats.p99, total_ms);

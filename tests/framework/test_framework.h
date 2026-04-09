@@ -194,43 +194,36 @@ static inline int _test_report(void)
             _suite.suite_name, _suite.passed, _suite.failed,
             _suite.count, _suite.total_duration_ms);
 
-    /* Write JSON */
+    /* Write JSON to file and stdout */
     FILE *f = fopen(_suite.output_path, "w");
-    if (!f) { f = stdout; }
+    FILE *dests[2] = { stdout, f };
+    int ndests = f ? 2 : 1;
 
-    fprintf(f, "{\n");
-    fprintf(f, "  \"suite\": \"%s\",\n", _suite.suite_name);
-    fprintf(f, "  \"timestamp\": \"%s\",\n", ts);
-    fprintf(f, "  \"duration_ms\": %.1f,\n", _suite.total_duration_ms);
-    fprintf(f, "  \"total\": %d,\n", _suite.count);
-    fprintf(f, "  \"passed\": %d,\n", _suite.passed);
-    fprintf(f, "  \"failed\": %d,\n", _suite.failed);
-    fprintf(f, "  \"tests\": [\n");
+#define _TPRINTF(...) do { for (int _d = 0; _d < ndests; _d++) fprintf(dests[_d], __VA_ARGS__); } while(0)
+
+    _TPRINTF("{\n");
+    _TPRINTF("  \"suite\": \"%s\",\n", _suite.suite_name);
+    _TPRINTF("  \"timestamp\": \"%s\",\n", ts);
+    _TPRINTF("  \"duration_ms\": %.1f,\n", _suite.total_duration_ms);
+    _TPRINTF("  \"total\": %d,\n", _suite.count);
+    _TPRINTF("  \"passed\": %d,\n", _suite.passed);
+    _TPRINTF("  \"failed\": %d,\n", _suite.failed);
+    _TPRINTF("  \"tests\": [\n");
 
     for (int i = 0; i < _suite.count; i++) {
         test_result_t *r = &_suite.results[i];
         char esc_msg[MAX_MSG_LEN * 2];
         _escape_json(r->message, esc_msg, sizeof(esc_msg));
-        fprintf(f, "    {\"name\": \"%s\", \"passed\": %s, \"duration_ms\": %.3f, \"message\": \"%s\"}%s\n",
+        _TPRINTF("    {\"name\": \"%s\", \"passed\": %s, \"duration_ms\": %.3f, \"message\": \"%s\"}%s\n",
                 r->name, r->passed ? "true" : "false", r->duration_ms,
                 esc_msg, (i < _suite.count - 1) ? "," : "");
     }
 
-    fprintf(f, "  ]\n}\n");
+    _TPRINTF("  ]\n}\n");
 
-    if (f != stdout) fclose(f);
+#undef _TPRINTF
 
-    /* Also print JSON to stdout for piping */
-    if (f != stdout) {
-        FILE *f2 = fopen(_suite.output_path, "r");
-        if (f2) {
-            char buf[4096];
-            size_t n;
-            while ((n = fread(buf, 1, sizeof(buf), f2)) > 0)
-                fwrite(buf, 1, n, stdout);
-            fclose(f2);
-        }
-    }
+    if (f) fclose(f);
 
     return _suite.failed > 0 ? 1 : 0;
 }

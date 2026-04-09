@@ -69,7 +69,7 @@ run_test() {
 
     # Escape output for JSON
     local esc_msg
-    esc_msg=$(echo "$msg" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\n/\\n/g' | head -c 500)
+    esc_msg=$(printf '%s' "$msg" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr '\n' ' ' | head -c 500)
 
     [ -n "$TESTS_JSON" ] && TESTS_JSON="${TESTS_JSON},"
     TESTS_JSON="${TESTS_JSON}
@@ -143,19 +143,19 @@ CLIENT_OUT=$(ZF_ATTR="${EMU_ATTR};interface=b2b1" /app/ilink3_client_static --fu
 wait ${SERVER_PID} 2>/dev/null || true
 
 run_test "protocol_negotiate_event" \
-    "echo '${CLIENT_OUT}' | grep -c 'Negotiate'" \
+    "echo \"${CLIENT_OUT}\" | grep -c 'Negotiate'" \
     0 ""
 
 run_test "protocol_establish_event" \
-    "echo '${CLIENT_OUT}' | grep -c 'Establish'" \
+    "echo \"${CLIENT_OUT}\" | grep -c 'Establish'" \
     0 ""
 
 run_test "protocol_sequence_event" \
-    "echo '${CLIENT_OUT}' | grep -c 'Sequence'" \
+    "echo \"${CLIENT_OUT}\" | grep -c 'Sequence'" \
     0 ""
 
 run_test "protocol_terminate_event" \
-    "echo '${CLIENT_OUT}' | grep -c 'Terminate\|TERMINATE'" \
+    "echo \"${CLIENT_OUT}\" | grep -c 'Terminate\|TERMINATE'" \
     0 ""
 
 # ── Test 4: Server exits cleanly ────────────────────────────────────────

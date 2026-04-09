@@ -15,3 +15,6 @@ test_frame_extract
 perf_session
 tests/results/
 test-results/
+
+# Steering files with sensitive info
+.kiro/steering/target-server-testing.md

@@ -54,7 +54,7 @@ test_validation: tests/unit/test_validation.c ilink3_auth.h ilink3_sbe.h
 test_frame_extract: tests/unit/test_frame_extract.c ilink3_sbe.h
 	$(CC) $(TEST_CFLAGS) -o $@ $<
 
-perf_session: tests/perf/perf_session.c $(HEADERS) ilink3_auth.h
+perf_session: tests/perf/perf_session.c $(HEADERS)
 	$(CC) $(TEST_CFLAGS) -I$(ZF_INCLUDE) -o $@ $< $(TEST_LDFLAGS_ZF)
 
 clean:
